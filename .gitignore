@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Test / coverage tooling
+.pytest_cache/
+.coverage
+.coverage.*
+
+# CI-generated evidence artifacts (produced by GitHub Actions, not committed)
+test-results.xml
+coverage.xml
+build-info.json
