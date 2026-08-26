@@ -6,6 +6,7 @@ Implements:
     REQ-001 - Greeting: the greeting contains the supplied name.
     REQ-002 - Default Greeting: the greeting uses "Hello".
     REQ-003 - Input Validation: an empty name is rejected.
+    REQ-004 - Punctuation: the greeting ends with an exclamation mark.
 """
 
 DEFAULT_GREETING = "Hello"
@@ -18,7 +19,7 @@ def hello(name: str) -> str:
         name: The name to greet.
 
     Returns:
-        A greeting of the form ``Hello, <name>``.
+        A greeting of the form ``Hello, <name>!``.
 
     Raises:
         ValueError: If ``name`` is empty.
@@ -26,4 +27,4 @@ def hello(name: str) -> str:
     if not name:
         raise ValueError("Name cannot be empty")
 
-    return f"{DEFAULT_GREETING}, {name}"
+    return f"{DEFAULT_GREETING}, {name}!"
