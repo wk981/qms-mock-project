@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Unit tests and evidence generation
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_NAME: Hello Project
+      PROJECT_VERSION: "1.0.0"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+
+      - name: Run unit tests
+        id: tests
+        continue-on-error: true
+        run: |
+          pytest \
+            --junitxml=test-results.xml \
+            --cov=src \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term
+
+      - name: Generate build information
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          if [ "$TEST_OUTCOME" = "success" ]; then
+            BUILD_STATUS="passed"
+          else
+            BUILD_STATUS="failed"
+          fi
+
+          jq -n \
+            --arg project        "$PROJECT_NAME" \
+            --arg repository     "${GITHUB_REPOSITORY##*/}" \
+            --arg version        "$PROJECT_VERSION" \
+            --arg commit         "$GITHUB_SHA" \
+            --arg build_number   "$GITHUB_RUN_NUMBER" \
+            --arg status         "$BUILD_STATUS" \
+            --arg branch         "$GITHUB_REF_NAME" \
+            --arg workflow       "$GITHUB_WORKFLOW" \
+            --arg run_id         "$GITHUB_RUN_ID" \
+            --arg python_version "$(python --version | cut -d' ' -f2)" \
+            '{
+               project:        $project,
+               repository:     $repository,
+               version:        $version,
+               commit:         $commit,
+               build_number:   $build_number,
+               status:         $status,
+               branch:         $branch,
+               workflow:       $workflow,
+               run_id:         $run_id,
+               python_version: $python_version
+             }' > build-info.json
+
+          cat build-info.json
+        shell: bash
+
+      - name: Upload test and build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dte-evidence
+          path: |
+            test-results.xml
+            coverage.xml
+            build-info.json
+          if-no-files-found: error
+
+      - name: Fail the job if any unit test failed
+        if: steps.tests.outcome != 'success'
+        run: |
+          echo "Unit tests did not pass. See the test-results.xml artifact."
+          exit 1
