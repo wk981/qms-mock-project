@@ -1,21 +1,10 @@
-"""Greeting generation module."""
+"""Greeting generation module wrapper.
 
-DEFAULT_GREETING = "Hello"
+Re-exports the hello() function from the original src module.
+This allows the fullstack backend to use the same greeting logic
+as the original DTE demo module.
+"""
 
+from src.hello import hello
 
-def hello(name: str) -> str:
-    """Return a greeting for the given name.
-
-    Args:
-        name: The name to greet.
-
-    Returns:
-        A greeting of the form "Hello, <name>!".
-
-    Raises:
-        ValueError: If name is empty.
-    """
-    if not name:
-        raise ValueError("Name cannot be empty")
-
-    return f"{DEFAULT_GREETING}, {name}!"
+__all__ = ["hello"]
