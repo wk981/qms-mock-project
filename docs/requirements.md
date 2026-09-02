@@ -50,20 +50,55 @@ The system shall record each greeting request in the application log.
 Every invocation of the greeting operation must produce a log entry identifying the
 request. This requirement is **not implemented in version 1.0.0**.
 
+### REQ-006 — Greeting API
+
+The system shall expose the greeting operation over HTTP via a REST API.
+
+The API shall accept POST requests to `/api/greet` with a JSON body containing a `name`
+field, and return a JSON response containing the greeting. The returned greeting must
+satisfy REQ-001 through REQ-004.
+
+### REQ-007 — API Input Validation
+
+The system shall validate input at the API boundary and reject empty names with an
+appropriate HTTP error response.
+
+When an empty or missing name is supplied via the `/api/greet` endpoint, the system
+must return an HTTP 400 response with an error detail message, rather than returning a
+greeting.
+
+### REQ-008 — Greeting Web Interface
+
+The system shall provide a web-based user interface for submitting a name and viewing
+the resulting greeting.
+
+A user shall be able to open the web UI in a browser, enter their name in a form,
+submit the form, and see the greeting or an error message displayed on the page.
+
 ## 3. Requirement Status
 
-| Requirement | Title | Status in v1.0.0 |
+| Requirement | Title | Status |
 |---|---|---|
 | REQ-001 | Greeting | Implemented |
 | REQ-002 | Default Greeting | Implemented |
 | REQ-003 | Input Validation | Implemented |
 | REQ-004 | Punctuation | Implemented |
 | REQ-005 | Logging | Not implemented |
+| REQ-006 | Greeting API | Implemented |
+| REQ-007 | API Input Validation | Implemented |
+| REQ-008 | Greeting Web Interface | Implemented |
 
 ## 4. Verification
 
 Requirements REQ-001 through REQ-004 are verified by the automated unit tests in
-`tests/test_hello.py`, which are executed by the continuous integration pipeline on
-every push and pull request.
+`tests/test_hello.py` and `backend/tests/test_greeting.py`, which are executed by
+the continuous integration pipeline on every push and pull request.
 
-REQ-005 has no implementation and no verification in version 1.0.0.
+REQ-005 has no implementation and no verification; it is a known gap.
+
+Requirements REQ-006 and REQ-007 are verified by the API integration tests in
+`backend/tests/test_main.py`, which test the `/api/greet` endpoint with both valid
+and invalid input.
+
+Requirement REQ-008 is verified by manual exploratory testing of the web interface
+at `http://localhost:5173` (development) or the production deployment URL.

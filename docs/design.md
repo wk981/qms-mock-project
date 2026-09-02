@@ -4,31 +4,52 @@
 |---|---|
 | Project | Hello Project |
 | Repository | `hello-project` |
-| Version | 1.0.0 |
+| Version | 2.0.0 |
 | Related document | [Software Requirements Specification](requirements.md) |
 
 ## 1. Architecture
 
-The demonstration application consists of a single small Python module.
+The application is a fullstack web service with three layers:
 
-There is no database, no network service and no user interface. A caller imports the
-module and invokes one function.
+1. **Frontend** — A web-based user interface (React + TypeScript) running in the browser
+2. **Backend** — A REST API service (FastAPI + Python) exposing the greeting operation over HTTP
+3. **Core Logic** — A pure Python module that implements the greeting functionality
+
+Data flow:
 
 ```text
-caller
+User (Browser)
+  │
+  ├─► frontend/src/App.tsx  (React UI, form submission)
+  │       │
+  │       ▼
+  │   frontend/src/api.ts   (HTTP client)
+  │       │
+  │       │  HTTP POST /api/greet
+  │       │
+  ▼       ▼
+backend/app/main.py  (FastAPI)
+  │
+  ├─► request validation (Pydantic)
+  │
+  ├─► backend/app/greeting.py  (greeting wrapper)
   │
   ▼
-src/hello.py  ──►  hello(name) ──► greeting string
+src/hello.py  ──►  hello(name)  ──►  greeting string
                         │
-                        └────────► ValueError (invalid input)
+                        └───────►  ValueError (invalid input)
 ```
 
-The module is pure and stateless: the same input always produces the same output, and no
-state is retained between calls. This keeps the module fully testable by unit test alone.
+Each layer is responsible for a distinct concern:
+- The **core module** (`src/hello.py`) validates input and generates greetings
+- The **backend** (`backend/app/main.py`) translates HTTP requests to Python function calls
+  and HTTP responses, enforcing API contracts via Pydantic models
+- The **frontend** (`frontend/src/App.tsx`) provides a user-friendly form interface and
+  handles async request/response flow
 
 ## 2. Software Configuration Items
 
-### SCI-001 — `hello.py`
+### SCI-001 — Core Greeting Module
 
 Location: `src/hello.py`
 
@@ -42,11 +63,52 @@ This module is responsible for:
 | Configuration item | SCI-001 |
 | File | `src/hello.py` |
 | Language | Python 3 |
-| Safety classification | Safety-critical (see README) |
+| Safety classification | Safety-critical |
 | Requirements allocated | REQ-001, REQ-002, REQ-003, REQ-004 |
-| Unit tests | `tests/test_hello.py` |
+| Unit tests | `tests/test_hello.py`, `backend/tests/test_greeting.py` |
 
-## 3. Interface
+### SCI-002 — FastAPI Application
+
+Location: `backend/app/main.py`
+
+This module is responsible for:
+
+* **HTTP routing** — accepting POST requests to `/api/greet`
+* **request validation** — parsing and validating JSON request bodies using Pydantic models
+* **response formatting** — returning JSON responses with greeting or error messages
+* **error handling** — translating Python exceptions (ValueError from the core module) into
+  appropriate HTTP status codes and error detail messages
+
+| Attribute | Value |
+|---|---|
+| Configuration item | SCI-002 |
+| File | `backend/app/main.py` |
+| Language | Python 3 |
+| Requirements allocated | REQ-006, REQ-007 |
+| Integration tests | `backend/tests/test_main.py` |
+| Dependencies | FastAPI, Pydantic, SCI-001 |
+
+### SCI-003 — React Frontend Application
+
+Location: `frontend/src/App.tsx`
+
+This component is responsible for:
+
+* **user input collection** — a form input field for the user's name
+* **API communication** — sending POST requests to `/api/greet` via `frontend/src/api.ts`
+* **response handling** — displaying the greeting or error message returned from the backend
+* **user feedback** — loading states, form submission handling, and error display
+
+| Attribute | Value |
+|---|---|
+| Configuration item | SCI-003 |
+| File | `frontend/src/App.tsx` |
+| Language | TypeScript / React |
+| Requirements allocated | REQ-008 |
+| Test coverage | Manual exploratory testing (no automated tests) |
+| Dependencies | React, SCI-002 (via HTTP) |
+
+## 3. Core Module Interface (SCI-001)
 
 ```text
 hello(name: str) -> str
@@ -62,32 +124,84 @@ hello(name: str) -> str
 
 A greeting string of the form `Hello, <name>!`.
 
-The returned string begins with the default greeting `Hello` (REQ-002), contains the
-supplied name (REQ-001), and ends with an exclamation mark (REQ-004).
+**Error Handling**
+
+An empty name raises `ValueError("Name cannot be empty")`. The validation check is
+performed before greeting construction.
 
 **Example**
 
 ```text
-hello("Alice")  ->  "Hello, Alice!"
+hello("Alice")  →  "Hello, Alice!"
+hello("")       →  ValueError: Name cannot be empty
 ```
 
-## 4. Error Handling
+## 4. REST API Interface (SCI-002)
 
-An empty name results in a `ValueError`.
+### POST /api/greet
 
-| Condition | Behaviour |
-|---|---|
-| `name` is empty | Raise `ValueError("Name cannot be empty")` |
+**Request**
 
-The validation check is performed before the greeting is constructed, so no greeting is
-returned when the input is invalid. This implements REQ-003.
+```json
+{
+  "name": "string"
+}
+```
 
-No other error conditions are handled; any other input is passed through to string
-formatting unchanged.
+**Response (200 OK)**
 
-## 5. Design Limitations
+```json
+{
+  "greeting": "Hello, Alice!"
+}
+```
 
-Version 1.0.0 implements REQ-001 through REQ-004 only.
+**Response (400 Bad Request)**
 
-REQ-005 (Logging) is not addressed by this design. The module performs no logging, and no
-logging component is defined.
+```json
+{
+  "detail": "Name cannot be empty"
+}
+```
+
+**Behavior**
+
+- Accepts JSON POST request with a `name` field
+- Calls the core module's `hello(name)` function
+- Returns the greeting in a JSON response object
+- Translates `ValueError` exceptions to HTTP 400 with the error message as `detail`
+
+## 5. Frontend Interface (SCI-003)
+
+The React component provides:
+
+- A text input field labeled "Enter your name"
+- A "Get Greeting" button to submit the form
+- A result area displaying either the greeting (green background) or an error message (red background)
+- Loading state feedback during API request
+- Form clearing on successful submission
+
+## 6. Error Handling
+
+**Core Module (SCI-001)**
+- Empty input raises `ValueError` before processing
+
+**API Layer (SCI-002)**
+- Catches `ValueError` and translates to HTTP 400 with error detail
+- Pydantic validation errors are implicitly handled by the framework
+
+**Frontend (SCI-003)**
+- Displays backend error detail messages to the user
+- Shows loading state during request
+- Allows retrying after an error
+
+## 7. Design Limitations
+
+- **REQ-005 (Logging)** is not implemented. Neither the core module nor the backend API
+  generates structured log entries for greeting requests. This is a known gap.
+
+- **Frontend testing** — SCI-003 has no automated test suite. Requirement REQ-008
+  is verified by manual exploratory testing only.
+
+- **Data persistence** — The system does not store greeting history or any state
+  across requests. Each request is independent.
