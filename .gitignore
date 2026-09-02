@@ -3,13 +3,28 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.pylibs/
 
 # Test / coverage tooling
 .pytest_cache/
 .coverage
 .coverage.*
+.tox/
 
-# CI-generated evidence artifacts (produced by GitHub Actions, not committed)
-test-results.xml
-coverage.xml
-build-info.json
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local

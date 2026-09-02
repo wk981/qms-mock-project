@@ -5,13 +5,9 @@ on:
   pull_request:
 
 jobs:
-  test:
-    name: Unit tests and evidence generation
+  backend:
+    name: Backend Tests
     runs-on: ubuntu-latest
-
-    env:
-      PROJECT_NAME: Hello Project
-      PROJECT_VERSION: "1.0.0"
 
     steps:
       - name: Check out repository
@@ -22,72 +18,36 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install test dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov
+          pip install -r backend/requirements.txt
 
-      - name: Run unit tests
-        id: tests
-        continue-on-error: true
-        run: |
-          pytest \
-            --junitxml=test-results.xml \
-            --cov=src \
-            --cov-report=xml:coverage.xml \
-            --cov-report=term
+      - name: Run tests
+        working-directory: backend
+        run: pytest tests/ -v
 
-      - name: Generate build information
-        if: always()
-        env:
-          TEST_OUTCOME: ${{ steps.tests.outcome }}
-        run: |
-          if [ "$TEST_OUTCOME" = "success" ]; then
-            BUILD_STATUS="passed"
-          else
-            BUILD_STATUS="failed"
-          fi
+  frontend:
+    name: Frontend Build & Type Check
+    runs-on: ubuntu-latest
 
-          jq -n \
-            --arg project        "$PROJECT_NAME" \
-            --arg repository     "${GITHUB_REPOSITORY##*/}" \
-            --arg version        "$PROJECT_VERSION" \
-            --arg commit         "$GITHUB_SHA" \
-            --arg build_number   "$GITHUB_RUN_NUMBER" \
-            --arg status         "$BUILD_STATUS" \
-            --arg branch         "$GITHUB_REF_NAME" \
-            --arg workflow       "$GITHUB_WORKFLOW" \
-            --arg run_id         "$GITHUB_RUN_ID" \
-            --arg python_version "$(python --version | cut -d' ' -f2)" \
-            '{
-               project:        $project,
-               repository:     $repository,
-               version:        $version,
-               commit:         $commit,
-               build_number:   $build_number,
-               status:         $status,
-               branch:         $branch,
-               workflow:       $workflow,
-               run_id:         $run_id,
-               python_version: $python_version
-             }' > build-info.json
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-          cat build-info.json
-        shell: bash
-
-      - name: Upload test and build evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          name: dte-evidence
-          path: |
-            test-results.xml
-            coverage.xml
-            build-info.json
-          if-no-files-found: error
+          node-version: "18"
 
-      - name: Fail the job if any unit test failed
-        if: steps.tests.outcome != 'success'
-        run: |
-          echo "Unit tests did not pass. See the test-results.xml artifact."
-          exit 1
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type check with TypeScript
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build

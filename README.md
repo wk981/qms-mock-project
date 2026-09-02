@@ -1,146 +1,187 @@
-# Hello Project
+# Hello App — A Fullstack Example
 
-## Project
+A minimal fullstack application demonstrating a **FastAPI backend** and **React frontend** that work together to provide a simple greeting service.
 
-Hello Project
+## What it does
 
-## Purpose
+- **Frontend**: A React form where users enter their name
+- **Backend**: A FastAPI service that generates personalized greetings
+- **Communication**: REST API over HTTP
 
-This is a demonstration software project for automated **Development, Test and Evaluation
-(DTE)** documentation generation.
+Enter your name, submit the form, and receive a personalized greeting. The app demonstrates basic request/response handling, input validation, and error display.
 
-The software itself is deliberately trivial — a single greeting function that any engineer
-can understand in a couple of minutes. The value of this repository lies in the
-engineering evidence built around that software: a requirements specification, a design
-document, source code, unit tests, issue-tracked development work, a git history, and a
-continuous integration pipeline that emits machine-readable test and build evidence.
+## Architecture
 
-That evidence is the input to a separate DTE documentation process, which consumes this
-repository and produces the DTE output documents. Those output documents are **not**
-contained in this repository.
-
-## Repository
-
-`hello-project`
-
-## Version
-
-`1.0.0`
-
-## Safety Classification
-
-The `hello` module is classified as safety-critical for this demonstration project.
-
-Because the module is safety-critical, **Unit Test Results documentation is applicable**
-to it under the DTE process.
-
-## Requirements
-
-The software requirements are specified in [`docs/requirements.md`](docs/requirements.md).
-
-| Requirement | Title | Implemented in v1.0.0 |
-|---|---|---|
-| REQ-001 | Greeting | Yes |
-| REQ-002 | Default Greeting | Yes |
-| REQ-003 | Input Validation | Yes |
-| REQ-004 | Punctuation | Yes |
-| REQ-005 | Logging | **No** |
-
-REQ-005 is not implemented in version 1.0.0. It has no implementation, no unit test and no
-CI verification evidence.
-
-## Design
-
-The software design is described in [`docs/design.md`](docs/design.md).
-
-The design defines one software configuration item:
-
-* **SCI-001 — `src/hello.py`** — responsible for generating greetings and validating input.
-
-## Usage
-
-```python
-from src.hello import hello
-
-hello("Alice")   # "Hello, Alice!"
-hello("")        # raises ValueError: Name cannot be empty
+```
+┌─────────────────┐
+│  React Frontend │
+│  (Vite + TS)    │
+└────────┬────────┘
+         │ POST /api/greet
+         │ { "name": "Alice" }
+         │
+         ▼
+┌─────────────────────┐
+│  FastAPI Backend    │
+│                     │
+│ • Validates input   │
+│ • Generates greet   │
+│ • Returns JSON      │
+└─────────────────────┘
 ```
 
-## Testing
+## Prerequisites
 
-The unit tests live in [`tests/test_hello.py`](tests/test_hello.py) and are written with
-pytest. Each test verifies a single requirement and its docstring names that requirement.
+- **Python 3.11+** (for the backend)
+- **Node.js 18+** (for the frontend)
+- **npm** (frontend package manager)
 
-| Test | Requirement |
-|---|---|
-| `test_greeting_contains_name` | REQ-001 |
-| `test_default_greeting` | REQ-002 |
-| `test_empty_name_is_rejected` | REQ-003 |
-| `test_greeting_ends_with_exclamation_mark` | REQ-004 |
+## Setup and Running
 
-To run the tests locally:
+### Backend
+
+Install dependencies:
+```bash
+cd backend
+pip install -r requirements.txt
+# or if venv doesn't work in your environment:
+# pip install --target .pylibs -r requirements.txt
+# export PYTHONPATH=.pylibs
+```
+
+Run the development server:
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+The backend will be available at `http://localhost:8000`.
+
+### Frontend
+
+Install dependencies and start the dev server:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend will typically run on `http://localhost:5173`.
+
+Open that URL in your browser, enter a name, and submit the form to test the greeting flow.
+
+## Running Tests
+
+### Backend tests
 
 ```bash
-pip install pytest pytest-cov
-pytest --junitxml=test-results.xml --cov=src --cov-report=xml:coverage.xml
+cd backend
+# If using .pylibs:
+PYTHONPATH=.pylibs python3 -m pytest tests/
+
+# Or if installed normally:
+pytest tests/
 ```
 
-## Continuous Integration
+All 7 tests should pass:
+- 4 unit tests for the greeting logic
+- 2 API tests for the FastAPI endpoints
+- 1 health check test
 
-GitHub Actions runs the automated tests on every push and pull request and produces
-machine-readable artifacts. The workflow is defined in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+### Frontend tests
 
-The CI pipeline produces the following evidence, uploaded as the **`dte-evidence`**
-artifact on every run:
+TypeScript type-checking (via build):
+```bash
+cd frontend
+npm run build  # TypeScript will fail the build if there are type errors
+```
 
-| File | Format | Contents |
-|---|---|---|
-| `test-results.xml` | JUnit XML | Unit test results — total, passed, failed, skipped, and individual test names |
-| `coverage.xml` | Cobertura XML | Code coverage results for `src/` |
-| `build-info.json` | JSON | Build information |
+## API Reference
 
-`build-info.json` has the following shape. The commit SHA and build number are taken from
-the GitHub Actions environment at run time and are never hard-coded:
+### POST /api/greet
 
+Generate a greeting for the given name.
+
+**Request:**
 ```json
 {
-  "project": "Hello Project",
-  "repository": "hello-project",
-  "version": "1.0.0",
-  "commit": "<GITHUB_SHA>",
-  "build_number": "<GITHUB_RUN_NUMBER>",
-  "status": "passed"
+  "name": "Alice"
 }
 ```
 
-The latest CI result for any commit can be found on the
-[Actions](../../actions) tab, and the evidence artifact can be downloaded from the
-corresponding run.
-
-## Repository layout
-
-```text
-hello-project/
-├── README.md
-├── pytest.ini
-├── docs/
-│   ├── requirements.md          Software Requirements Specification
-│   └── design.md                Software Design Document
-├── src/
-│   ├── __init__.py
-│   └── hello.py                 SCI-001
-├── tests/
-│   ├── __init__.py
-│   └── test_hello.py            Unit tests for SCI-001
-├── .github/
-│   └── workflows/
-│       └── ci.yml               CI pipeline and evidence generation
-└── output/                      Reserved for generated DTE documents
+**Response (200 OK):**
+```json
+{
+  "greeting": "Hello, Alice!"
+}
 ```
 
-## Development history
+**Response (400 Bad Request):**
+```json
+{
+  "detail": "Name cannot be empty"
+}
+```
 
-The development work is tracked in the repository's GitHub Issues, each of which
-references the requirement it implements, and in the git history. Version `1.0.0` is
-tagged as `v1.0.0`.
+### GET /health
+
+Health check endpoint.
+
+**Response (200 OK):**
+```json
+{
+  "status": "ok"
+}
+```
+
+## Project Structure
+
+```
+hello-project/
+├── README.md
+├── .gitignore
+├── backend/
+│   ├── requirements.txt
+│   ├── pytest.ini
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py             FastAPI application
+│   │   └── greeting.py         Greeting logic
+│   └── tests/
+│       ├── __init__.py
+│       ├── test_greeting.py    Unit tests
+│       └── test_main.py        API tests
+├── frontend/
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── index.html
+│   ├── .gitignore
+│   └── src/
+│       ├── main.tsx
+│       ├── App.tsx             Main React component
+│       ├── App.css
+│       └── api.ts              API client
+└── .github/
+    └── workflows/
+        └── ci.yml              GitHub Actions CI
+```
+
+## Development Notes
+
+- The backend runs on port 8000 by default
+- The frontend (Vite dev server) runs on port 5173 by default
+- CORS is configured to allow requests from both localhost:5173 and localhost:3000
+- The greeting validation happens on the backend; empty names return a 400 error
+
+## Technology Stack
+
+**Backend:**
+- FastAPI — modern Python web framework
+- Uvicorn — ASGI server
+- Pydantic — data validation
+- Pytest — testing framework
+
+**Frontend:**
+- React 18 — UI library
+- Vite — build tool and dev server
+- TypeScript — type-safe JavaScript
